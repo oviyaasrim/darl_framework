@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FDA AI Device Intelligence & Validation Scenario Builder</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg-primary: #050c14;
+    --bg-secondary: #0a1623;
+    --bg-card: #0d1e30;
+    --bg-card-hover: #112234;
+    --accent-cyan: #00d4ff;
+    --accent-green: #00e5a0;
+    --accent-orange: #ff7c2a;
+    --accent-red: #ff3d5a;
+    --accent-purple: #b06eff;
+    --text-primary: #e8f4f8;
+    --text-secondary: #7ba3bb;
+    --text-dim: #3d6478;
+    --border: #1a3045;
+    --border-bright: #1e4060;
+    --glow-cyan: rgba(0,212,255,0.15);
+    --glow-green: rgba(0,229,160,0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid noise overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.015) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 0 24px 48px; }
+
+  /* Header */
+  .header {
+    padding: 32px 0 28px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .header-left { display: flex; flex-direction: column; gap: 6px; }
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,212,255,0.08);
+    border: 1px solid rgba(0,212,255,0.25);
+    color: var(--accent-cyan);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border-radius: 3px;
+    width: fit-content;
+  }
+  .header-badge::before { content: '●'; font-size: 8px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+  h1 {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    color: var(--text-primary);
+  }
+  h1 span { color: var(--accent-cyan); }
+  .header-meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+  .header-right {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .stat-pill {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 20px;
+    text-align: center;
+  }
+  .stat-pill .val {
+    display: block;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--accent-cyan);
+    line-height: 1;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .stat-pill .lbl {
+    display: block;
+    font-size: 10px;
+    color: var(--text-secondary);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 28px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px;
+    width: fit-content;
+  }
+  .tab {
+    padding: 8px 22px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 0.03em;
+    color: var(--text-secondary);
+    background: transparent;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .tab:hover { color: var(--text-primary); background: rgba(255,255,255,0.04); }
+  .tab.active { color: var(--bg-primary); background: var(--accent-cyan); font-weight: 600; }
+
+  /* Grid layouts */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
+  .span-2 { grid-column: span 2; }
+  .span-3 { grid-column: span 3; }
+
+  /* Cards */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px;
+    transition: border-color 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .card:hover { border-color: var(--border-bright); }
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  .card-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .card-tag {
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 3px 8px;
+    border-radius: 3px;
+    letter-spacing: 0.05em;
+  }
+  .tag-cyan { background: rgba(0,212,255,0.1); color: var(--accent-cyan); border: 1px solid rgba(0,212,255,0.2); }
+  .tag-green { background: rgba(0,229,160,0.1); color: var(--accent-green); border: 1px solid rgba(0,229,160,0.2); }
+  .tag-orange { background: rgba(255,124,42,0.1); color: var(--accent-orange); border: 1px solid rgba(255,124,42,0.2); }
+  .tag-red { background: rgba(255,61,90,0.1); color: var(--accent-red); border: 1px solid rgba(255,61,90,0.2); }
+  .tag-purple { background: rgba(176,110,255,0.1); color: var(--accent-purple); border: 1px solid rgba(176,110,255,0.2); }
+
+  /* Chart canvas */
+  .chart-wrap { position: relative; }
+
+  /* KPI cards */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 24px; }
+  .kpi {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .kpi.cyan::after { background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent); }
+  .kpi.green::after { background: linear-gradient(90deg, transparent, var(--accent-green), transparent); }
+  .kpi.orange::after { background: linear-gradient(90deg, transparent, var(--accent-orange), transparent); }
+  .kpi.red::after { background: linear-gradient(90deg, transparent, var(--accent-red), transparent); }
+  .kpi-label { font-size: 10px; font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-secondary); margin-bottom: 10px; }
+  .kpi-value { font-size: 32px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; line-height: 1; }
+  .kpi-value.cyan { color: var(--accent-cyan); }
+  .kpi-value.green { color: var(--accent-green); }
+  .kpi-value.orange { color: var(--accent-orange); }
+  .kpi-value.red { color: var(--accent-red); }
+  .kpi-sub { font-size: 11px; color: var(--text-dim); margin-top: 6px; }
+  .kpi-delta { font-size: 11px; font-family: 'IBM Plex Mono', monospace; margin-top: 4px; }
+  .kpi-delta.up { color: var(--accent-green); }
+
+  /* Horizontal bar */
+  .hbar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .hbar-label { font-size: 12px; color: var(--text-secondary); width: 90px; flex-shrink: 0; }
+  .hbar-track { flex: 1; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; }
+  .hbar-fill { height: 100%; border-radius: 4px; transition: width 1.2s cubic-bezier(0.16,1,0.3,1); }
+  .hbar-val { font-size: 12px; font-family: 'IBM Plex Mono', monospace; color: var(--text-primary); width: 40px; text-align: right; flex-shrink: 0; }
+
+  /* Tab panels */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Validation scenario builder */
+  .scenario-header {
+    background: linear-gradient(135deg, rgba(0,229,160,0.06) 0%, rgba(0,212,255,0.04) 100%);
+    border: 1px solid rgba(0,229,160,0.2);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+  }
+  .scenario-icon {
+    width: 44px; height: 44px;
+    background: rgba(0,229,160,0.1);
+    border: 1px solid rgba(0,229,160,0.3);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .scenario-title { font-size: 17px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+  .scenario-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .form-field { display: flex; flex-direction: column; gap: 6px; }
+  .form-label { font-size: 11px; font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); }
+  .form-select, .form-input {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    appearance: none;
+  }
+  .form-select:focus, .form-input:focus { border-color: var(--accent-cyan); box-shadow: 0 0 0 3px rgba(0,212,255,0.08); }
+  .form-select option { background: var(--bg-card); }
+
+  .btn-primary {
+    background: var(--accent-cyan);
+    color: var(--bg-primary);
+    border: none;
+    border-radius: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: 12px 28px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .btn-primary:hover { background: #33ddff; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,212,255,0.25); }
+  .btn-secondary {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    padding: 12px 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-secondary:hover { border-color: var(--border-bright); color: var(--text-primary); }
+
+  /* Validation output */
+  .validation-output {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin-top: 20px;
+    display: none;
+  }
+  .validation-output.show { display: block; }
+  .output-title {
+    font-size: 13px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--accent-green);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .output-title::before { content: '✓'; font-size: 14px; }
+
+  .phase-list { display: flex; flex-direction: column; gap: 0; }
+  .phase-item {
+    display: flex;
+    gap: 20px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  .phase-item:last-child { border-bottom: none; }
+  .phase-left { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 0; }
+  .phase-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .phase-line { width: 1px; flex: 1; min-height: 20px; background: var(--border); margin-top: 4px; }
+  .phase-item:last-child .phase-line { display: none; }
+  .phase-content { flex: 1; padding-top: 3px; }
+  .phase-name { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
+  .phase-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 8px; }
+  .phase-criteria { display: flex; flex-wrap: wrap; gap: 6px; }
+  .criteria-tag {
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 3px 8px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+  }
+
+  /* Risk meter */
+  .risk-meter {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 20px;
+    padding: 16px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .risk-label { font-size: 12px; font-family: 'IBM Plex Mono', monospace; color: var(--text-secondary); white-space: nowrap; }
+  .risk-track { flex: 1; height: 12px; background: rgba(255,255,255,0.05); border-radius: 6px; overflow: hidden; }
+  .risk-fill { height: 100%; border-radius: 6px; transition: width 1s cubic-bezier(0.16,1,0.3,1); }
+  .risk-score { font-size: 16px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; white-space: nowrap; }
+
+  /* Data source note */
+  .source-note {
+    background: rgba(0,212,255,0.04);
+    border: 1px solid rgba(0,212,255,0.12);
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    line-height: 1.7;
+    margin-top: 20px;
+  }
+  .source-note strong { color: var(--accent-cyan); }
+
+  /* MAUDE stats */
+  .event-breakdown { display: flex; flex-direction: column; gap: 10px; }
+  .event-row { display: flex; align-items: center; gap: 12px; }
+  .event-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .event-name { font-size: 12px; color: var(--text-secondary); flex: 1; }
+  .event-bar-wrap { width: 140px; height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
+  .event-bar { height: 100%; border-radius: 3px; }
+  .event-pct { font-size: 12px; font-family: 'IBM Plex Mono', monospace; color: var(--text-primary); width: 42px; text-align: right; }
+
+  /* Insight callout */
+  .insight {
+    background: rgba(255,124,42,0.06);
+    border-left: 3px solid var(--accent-orange);
+    padding: 12px 16px;
+    border-radius: 0 6px 6px 0;
+    margin-top: 16px;
+  }
+  .insight-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent-orange); margin-bottom: 5px; font-family: 'IBM Plex Mono', monospace; }
+  .insight p { font-size: 12px; color: var(--text-secondary); line-height: 1.7; }
+
+  @media (max-width: 900px) {
+    .grid-2, .grid-3, .kpi-grid, .form-grid { grid-template-columns: 1fr; }
+    .grid-4 { grid-template-columns: 1fr 1fr; }
+    .span-2, .span-3 { grid-column: span 1; }
+    h1 { font-size: 20px; }
+    .header { flex-direction: column; align-items: flex-start; }
+    .kpi-value { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="header-badge">FDA / MAUDE Intelligence Platform</div>
+      <h1>AI Medical Device <span>Performance & Validation</span><br>Intelligence Dashboard</h1>
+      <div class="header-meta">DATA SOURCES: FDA AI Device Authorization List · MAUDE Database · PMC Research · IntuitionLabs / BPC · As of Q1 2026</div>
+    </div>
+    <div class="header-right">
+      <div class="stat-pill"><span class="val">1,451</span><span class="lbl">Total FDA AI Devices</span></div>
+      <div class="stat-pill"><span class="val">295</span><span class="lbl">New in 2025</span></div>
+      <div class="stat-pill"><span class="val">15M+</span><span class="lbl">MAUDE Reports</span></div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="showPanel('fda')">FDA Authorizations</button>
+    <button class="tab" onclick="showPanel('maude')">MAUDE Analysis</button>
+    <button class="tab" onclick="showPanel('gaps')">Transparency Gaps</button>
+    <button class="tab" onclick="showPanel('validator')">Validation Scenario Builder</button>
+  </div>
+
+  <!-- Panel 1: FDA Authorizations -->
+  <div class="panel active" id="panel-fda">
+    <div class="kpi-grid">
+      <div class="kpi cyan">
+        <div class="kpi-label">Cumulative (End 2025)</div>
+        <div class="kpi-value cyan">1,451</div>
+        <div class="kpi-sub">AI/ML devices authorized by FDA</div>
+        <div class="kpi-delta up">▲ 110% since 2023</div>
+      </div>
+      <div class="kpi green">
+        <div class="kpi-label">Record Year 2025</div>
+        <div class="kpi-value green">295</div>
+        <div class="kpi-sub">New authorizations in a single year</div>
+        <div class="kpi-delta up">▲ 16.6% vs 2024</div>
+      </div>
+      <div class="kpi orange">
+        <div class="kpi-label">Radiology Dominance</div>
+        <div class="kpi-value orange">79%</div>
+        <div class="kpi-sub">Devices are imaging/radiology tools</div>
+        <div class="kpi-delta up">750 of ~950 as of mid-2024</div>
+      </div>
+      <div class="kpi red">
+        <div class="kpi-label">With PCCP (2025)</div>
+        <div class="kpi-value red">10%</div>
+        <div class="kpi-sub">Included Predetermined Change Control</div>
+        <div class="kpi-delta up">New post-Dec 2024 guidance</div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:20px;">
+      <div class="card span-2">
+        <div class="card-header">
+          <div class="card-title">Annual FDA AI/ML Device Authorizations (2015 - 2025)</div>
+          <div class="card-tag tag-cyan">SOURCE: FDA AI Device List / IntuitionLabs / PMC</div>
+        </div>
+        <div class="chart-wrap" style="height:280px;">
+          <canvas id="annualChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Cumulative Growth Trajectory</div>
+          <div class="card-tag tag-green">1995 - 2025</div>
+        </div>
+        <div class="chart-wrap" style="height:220px;">
+          <canvas id="cumulativeChart"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Authorized Devices by Medical Specialty</div>
+          <div class="card-tag tag-orange">~950 devices, mid-2024</div>
+        </div>
+        <div class="chart-wrap" style="height:180px; display:flex; align-items:center; gap:20px;">
+          <canvas id="specialtyChart" style="max-width:180px; max-height:180px;"></canvas>
+          <div style="flex:1;">
+            <div class="hbar-row"><div class="hbar-label" style="color:#00d4ff">Radiology</div><div class="hbar-track"><div class="hbar-fill" style="width:79%;background:#00d4ff;"></div></div><div class="hbar-val">79%</div></div>
+            <div class="hbar-row"><div class="hbar-label" style="color:#00e5a0">Cardiology</div><div class="hbar-track"><div class="hbar-fill" style="width:10%;background:#00e5a0;"></div></div><div class="hbar-val">10%</div></div>
+            <div class="hbar-row"><div class="hbar-label" style="color:#ff7c2a">Neurology</div><div class="hbar-track"><div class="hbar-fill" style="width:4%;background:#ff7c2a;"></div></div><div class="hbar-val">4%</div></div>
+            <div class="hbar-row"><div class="hbar-label" style="color:#b06eff">Hematology</div><div class="hbar-track"><div class="hbar-fill" style="width:2%;background:#b06eff;"></div></div><div class="hbar-val">2%</div></div>
+            <div class="hbar-row"><div class="hbar-label" style="color:#7ba3bb">Other</div><div class="hbar-track"><div class="hbar-fill" style="width:5%;background:#7ba3bb;"></div></div><div class="hbar-val">5%</div></div>
+          </div>
+        </div>
+        <div class="insight">
+          <div class="insight-title">Key Signal</div>
+          <p>Cardiology and neurology applications are growing steadily. Foundation model devices (e.g., Aidoc CARE1) received clearance in Feb 2025, signaling the next frontier beyond narrow imaging AI.</p>
+        </div>
+      </div>
+    </div>
+    <div class="source-note">
+      <strong>DATA SOURCES:</strong> FDA AI-Enabled Medical Devices List (last updated Dec 30, 2025) · IntuitionLabs FDA AI Tracker Analysis (2026) · PMC Systematic Reviews (JAMA Network Open, 2025) · Bipartisan Policy Center FDA Oversight Report (Nov 2025) · Pure Clinical FDA Analysis (2025). Annual counts: 2015=6, 2016=12, 2017=20, 2018=35, 2019=48, 2020=65, 2021=87, 2022=91, 2023=221, 2024=253, 2025=295. Cumulative end-2025: 1,451.
+    </div>
+  </div>
+
+  <!-- Panel 2: MAUDE -->
+  <div class="panel" id="panel-maude">
+    <div class="kpi-grid">
+      <div class="kpi cyan">
+        <div class="kpi-label">Total MAUDE Reports</div>
+        <div class="kpi-value cyan">15M+</div>
+        <div class="kpi-sub">Submitted over 30-year period</div>
+        <div class="kpi-delta up">2.5M+ in first 10 months of 2022</div>
+      </div>
+      <div class="kpi green">
+        <div class="kpi-label">On-Time Reporting</div>
+        <div class="kpi-value green">71%</div>
+        <div class="kpi-sub">Reported within 30-day FDA window</div>
+        <div class="kpi-delta up">4.5% = 31-180 days late</div>
+      </div>
+      <div class="kpi orange">
+        <div class="kpi-label">Malfunction-Only Events</div>
+        <div class="kpi-value orange">63.5%</div>
+        <div class="kpi-sub">No serious patient implications</div>
+        <div class="kpi-delta up">36.5% involve patient harm</div>
+      </div>
+      <div class="kpi red">
+        <div class="kpi-label">Led to Recalls</div>
+        <div class="kpi-value red">~20%</div>
+        <div class="kpi-sub">Reports triggering corrective action</div>
+        <div class="kpi-delta up">Per global 30-year MAUDE analysis</div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:20px;">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">MAUDE Event Type Distribution (Overall)</div>
+          <div class="card-tag tag-cyan">30-Year Aggregate</div>
+        </div>
+        <div class="chart-wrap" style="height:240px;">
+          <canvas id="maudeEventChart"></canvas>
+        </div>
+        <div class="insight">
+          <div class="insight-title">AI Device Gap in MAUDE</div>
+          <p>MAUDE was not designed to capture AI-specific failures. Concept drift, dataset shift, and algorithmic bias errors are largely invisible in current MDR reporting. This is a critical gap your V&V process must compensate for.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">MAUDE Reporting Timeliness Analysis</div>
+          <div class="card-tag tag-orange">2019-2022, 4.4M Reports</div>
+        </div>
+        <div class="chart-wrap" style="height:200px;">
+          <canvas id="timelinessChart"></canvas>
+        </div>
+        <div style="margin-top:16px;">
+          <div class="hbar-row">
+            <div class="hbar-label" style="width:130px;color:#00e5a0">On Time (≤30d)</div>
+            <div class="hbar-track"><div class="hbar-fill" style="width:71%;background:#00e5a0;"></div></div>
+            <div class="hbar-val">71.0%</div>
+          </div>
+          <div class="hbar-row">
+            <div class="hbar-label" style="width:130px;color:#ff7c2a">Late (31-180d)</div>
+            <div class="hbar-track"><div class="hbar-fill" style="width:4.5%;background:#ff7c2a;"></div></div>
+            <div class="hbar-val">4.5%</div>
+          </div>
+          <div class="hbar-row">
+            <div class="hbar-label" style="width:130px;color:#ff3d5a">Very Late (>180d)</div>
+            <div class="hbar-track"><div class="hbar-fill" style="width:9.1%;background:#ff3d5a;"></div></div>
+            <div class="hbar-val">9.1%</div>
+          </div>
+          <div class="hbar-row">
+            <div class="hbar-label" style="width:130px;color:#7ba3bb">Other/Unknown</div>
+            <div class="hbar-track"><div class="hbar-fill" style="width:15.4%;background:#7ba3bb;"></div></div>
+            <div class="hbar-val">15.4%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">AI-Specific Failure Modes NOT Captured by MAUDE</div>
+        <div class="card-tag tag-red">CRITICAL GAP FOR R&D ENGINEERS</div>
+      </div>
+      <div class="grid-3">
+        <div style="padding:16px; background:rgba(255,61,90,0.05); border:1px solid rgba(255,61,90,0.15); border-radius:8px;">
+          <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--accent-red);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Concept Drift</div>
+          <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">The real-world patient population deviates from the AI training distribution over time, silently degrading performance without triggering a reportable event.</div>
+        </div>
+        <div style="padding:16px; background:rgba(255,124,42,0.05); border:1px solid rgba(255,124,42,0.15); border-radius:8px;">
+          <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--accent-orange);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Algorithmic Bias</div>
+          <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">Subgroup performance disparities (by race, sex, age) are not captured in individual device reports and require population-level surveillance to detect.</div>
+        </div>
+        <div style="padding:16px; background:rgba(176,110,255,0.05); border:1px solid rgba(176,110,255,0.15); border-radius:8px;">
+          <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--accent-purple);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Dataset Shift</div>
+          <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">Changes in imaging equipment, clinical protocols, or EHR workflows can shift input distributions, causing silent AI performance degradation without any device malfunction.</div>
+        </div>
+      </div>
+    </div>
+    <div class="source-note">
+      <strong>DATA SOURCES:</strong> J Global Clinical Engineering MAUDE Analysis 2023 (15M reports, 30yr) · PMC Late Reporting Study 2025 (4.43M reports, 2019-2022) · Starfish Medical MAUDE Assessment (Aug 2025) · ScienceDirect MAUDE MDR Analysis 2024 (10M reports, 2011-2021).
+    </div>
+  </div>
+
+  <!-- Panel 3: Transparency Gaps -->
+  <div class="panel" id="panel-gaps">
+    <div class="card" style="margin-bottom:20px; background: linear-gradient(135deg, rgba(255,61,90,0.06),rgba(255,124,42,0.04));">
+      <div class="card-header">
+        <div class="card-title">AI Device Transparency Gaps at FDA Clearance (691 Devices, 1995-2023)</div>
+        <div class="card-tag tag-red">PMC JAMA Cross-Sectional Study, 2024</div>
+      </div>
+      <div class="grid-2">
+        <div>
+          <div class="chart-wrap" style="height:280px;">
+            <canvas id="transparencyChart"></canvas>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;justify-content:center;gap:14px;">
+          <div style="padding:14px;background:rgba(255,61,90,0.06);border:1px solid rgba(255,61,90,0.2);border-radius:8px;">
+            <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--accent-red);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">No Demographic Data</div>
+            <div style="font-size:28px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--accent-red);">95.5%</div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">of devices did not report race/ethnicity/sex breakdown in training data</div>
+          </div>
+          <div style="padding:14px;background:rgba(255,124,42,0.06);border:1px solid rgba(255,124,42,0.2);border-radius:8px;">
+            <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--accent-orange);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">No Training Sample Size</div>
+            <div style="font-size:28px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--accent-orange);">53.3%</div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">of devices did not disclose the size of their training dataset</div>
+          </div>
+          <div style="padding:14px;background:rgba(176,110,255,0.06);border:1px solid rgba(176,110,255,0.2);border-radius:8px;">
+            <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--accent-purple);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">Only RCT Evidence</div>
+            <div style="font-size:28px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--accent-purple);">1.6%</div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">of devices backed by randomized controlled trial data at clearance</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Clinical Validation Evidence Quality</div>
+          <div class="card-tag tag-purple">691 FDA Cleared Devices</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-top:4px;">
+          <div class="hbar-row">
+            <div class="hbar-label" style="width:160px;color:#ff3d5a">No Clinical Studies</div>
+            <div class="hbar-track"><div class="hbar-fill" style="width:25%;background:#ff3d5a;"></div></div>
+            <div class="hbar-val">~25%</div>
+          </div>
+          <div class="hbar-row">
+            <div class="hbar-label" style="width:160px;color:#ff7c2a">No Study Design Reported</div>
+            <div class="hbar-track"><div class="hbar-fill" style="width:46.7%;background:#ff7c2a;"></div></div>
+            <div class="hbar-val">46.7%</div>
+          </div>
+          <div class="hbar-row">
+            <div class="hbar-label" style="width:160px;color:#b06eff">No Training Sample Size</div>
+            <div class="hbar-track"><div class="hbar-fill" style="width:53.3%;background:#b06eff;"></div></div>
+            <div class="hbar-val">53.3%</div>
+          </div>
+          <div class="hbar-row">
+            <div class="hbar-label" style="width:160px;color:#7ba3bb">No Demographic Data</div>
+            <div class="hbar-track"><div class="hbar-fill" style="width:95.5%;background:#7ba3bb;"></div></div>
+            <div class="hbar-val">95.5%</div>
+          </div>
+          <div class="hbar-row">
+            <div class="hbar-label" style="width:160px;color:#00e5a0">Prospective Studies</div>
+            <div class="hbar-track"><div class="hbar-fill" style="width:7.7%;background:#00e5a0;"></div></div>
+            <div class="hbar-val">7.7%</div>
+          </div>
+          <div class="hbar-row">
+            <div class="hbar-label" style="width:160px;color:#00d4ff">RCT Evidence</div>
+            <div class="hbar-track"><div class="hbar-fill" style="width:1.6%;background:#00d4ff;"></div></div>
+            <div class="hbar-val">1.6%</div>
+          </div>
+        </div>
+        <div class="insight" style="margin-top:16px;">
+          <div class="insight-title">Implication for Engineers</div>
+          <p>The FDA's 2025 TPLC draft guidance directly responds to these gaps. Your validation documentation must now proactively address bias analysis, demographic representation, and post-market performance monitoring to future-proof submissions.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Regulatory Framework Evolution Timeline</div>
+          <div class="card-tag tag-cyan">FDA AI Policy Milestones</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:0;">
+          <div style="display:flex;gap:16px;padding:12px 0;border-bottom:1px solid var(--border);">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent-cyan);width:38px;flex-shrink:0;padding-top:1px;">2017</div>
+            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">FDA Digital Health Center of Excellence established. SaMD Clinical Evaluation guidance published.</div>
+          </div>
+          <div style="display:flex;gap:16px;padding:12px 0;border-bottom:1px solid var(--border);">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent-cyan);width:38px;flex-shrink:0;padding-top:1px;">2021</div>
+            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">10 Good Machine Learning Practice (GMLP) Guiding Principles released jointly by FDA, Health Canada, UK MHRA.</div>
+          </div>
+          <div style="display:flex;gap:16px;padding:12px 0;border-bottom:1px solid var(--border);">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent-green);width:38px;flex-shrink:0;padding-top:1px;">2024</div>
+            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">Final PCCP guidance published Dec 2024. EU AI Act enters force Aug 2024 (high-risk classification for medical AI).</div>
+          </div>
+          <div style="display:flex;gap:16px;padding:12px 0;border-bottom:1px solid var(--border);">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent-orange);width:38px;flex-shrink:0;padding-top:1px;">Jan 25</div>
+            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">FDA Draft Guidance: TPLC Lifecycle Management for AI-enabled devices. Covers model lineage, bias analysis, human-AI workflow, PCCP.</div>
+          </div>
+          <div style="display:flex;gap:16px;padding:12px 0;border-bottom:1px solid var(--border);">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent-orange);width:38px;flex-shrink:0;padding-top:1px;">2026</div>
+            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">QMSR replaces QSR, aligning US with ISO 13485. EU AI Act high-risk obligations enforcement begins Aug-2026/27.</div>
+          </div>
+          <div style="display:flex;gap:16px;padding:12px 0;">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent-purple);width:38px;flex-shrink:0;padding-top:1px;">2026+</div>
+            <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;">IMDRF GMLP final document (Jan 2025) sets international framework. ISO 22863 AI safety standards for devices in development.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="source-note">
+      <strong>DATA SOURCES:</strong> PMC Benefit-Risk Reporting Study (JAMA 2024, 691 devices) · PMC Generalizability Study (JAMA 2025, 903 devices) · Frontiers in Medicine Global AIMD Regulatory Decade Review (2025) · FDA.gov AI/ML Device Guidance Timeline · Fenwick FDA Draft Guidance Analysis (Jan 2026).
+    </div>
+  </div>
+
+  <!-- Panel 4: Validation Scenario Builder -->
+  <div class="panel" id="panel-validator">
+    <div class="scenario-header">
+      <div class="scenario-icon">⚙</div>
+      <div>
+        <div class="scenario-title">AI Medical Device Validation Scenario Builder</div>
+        <div class="scenario-desc">Generate a structured validation protocol framework aligned with FDA GMLP Guiding Principles, TPLC Draft Guidance (Jan 2025), IEC 62304, and ISO 14971. Configure your device parameters below to receive a tailored validation pathway with risk-weighted acceptance criteria.</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-header">
+        <div class="card-title">Device Configuration Parameters</div>
+        <div class="card-tag tag-cyan">Step 1: Define Your Device</div>
+      </div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label class="form-label">Device Specialty / Clinical Domain</label>
+          <select class="form-select" id="specialty">
+            <option value="radiology">Radiology / Diagnostic Imaging</option>
+            <option value="cardiology">Cardiology / ECG Analysis</option>
+            <option value="pathology">Pathology / Histology AI</option>
+            <option value="sepsis">Critical Care / Sepsis Prediction</option>
+            <option value="ophthalmology">Ophthalmology / Retinal Screening</option>
+            <option value="neurology">Neurology / Neuroimaging</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">FDA Device Classification</label>
+          <select class="form-select" id="classification">
+            <option value="class2_510k">Class II - 510(k) Clearance</option>
+            <option value="class2_denovo">Class II - De Novo Classification</option>
+            <option value="class3_pma">Class III - Premarket Approval (PMA)</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">AI Algorithm Type</label>
+          <select class="form-select" id="algoType">
+            <option value="locked">Locked Algorithm (static post-deployment)</option>
+            <option value="adaptive">Adaptive / Continuously Learning</option>
+            <option value="llm">Foundation Model / LLM-based</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Clinical Function</label>
+          <select class="form-select" id="clinicalFunc">
+            <option value="triage">Triage / Prioritization</option>
+            <option value="diagnosis">Diagnostic Decision Support</option>
+            <option value="detection">Detection / Screening</option>
+            <option value="quantification">Quantification / Measurement</option>
+            <option value="treatment">Treatment Planning</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Intended User Environment</label>
+          <select class="form-select" id="environment">
+            <option value="hospital">Hospital / Clinical Setting</option>
+            <option value="ambulatory">Ambulatory / Outpatient</option>
+            <option value="home">Home Use / Patient Self-Use</option>
+            <option value="poc">Point-of-Care / Remote</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Include PCCP (Predetermined Change Control)</label>
+          <select class="form-select" id="pccp">
+            <option value="yes">Yes - Include PCCP Framework</option>
+            <option value="no">No - Static Submission</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;">
+        <button class="btn-primary" onclick="generateScenario()">Generate Validation Protocol</button>
+        <button class="btn-secondary" onclick="resetForm()">Reset</button>
+      </div>
+    </div>
+
+    <div class="validation-output" id="validationOutput">
+      <div class="output-title">VALIDATION PROTOCOL GENERATED</div>
+      <div id="outputContent"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============ CHARTS ============
+const mono = "'IBM Plex Mono', monospace";
+const sans = "'IBM Plex Sans', sans-serif";
+const gridColor = 'rgba(255,255,255,0.04)';
+const textColor = '#7ba3bb';
+
+// Annual authorizations
+const annualCtx = document.getElementById('annualChart').getContext('2d');
+new Chart(annualCtx, {
+  type: 'bar',
+  data: {
+    labels: ['2015','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025'],
+    datasets: [{
+      label: 'New Authorizations',
+      data: [6, 12, 20, 35, 48, 65, 87, 91, 221, 253, 295],
+      backgroundColor: (ctx) => {
+        const val = ctx.raw;
+        if (val >= 250) return 'rgba(0,229,160,0.8)';
+        if (val >= 100) return 'rgba(0,212,255,0.7)';
+        return 'rgba(0,212,255,0.35)';
+      },
+      borderColor: (ctx) => {
+        const val = ctx.raw;
+        if (val >= 250) return '#00e5a0';
+        return '#00d4ff';
+      },
+      borderWidth: 1,
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#0d1e30',
+        borderColor: '#1a3045',
+        borderWidth: 1,
+        titleFont: { family: mono, size: 11 },
+        bodyFont: { family: mono, size: 13 },
+        callbacks: {
+          title: (i) => `Year: ${i[0].label}`,
+          label: (i) => ` New authorizations: ${i.raw}`
+        }
+      }
+    },
+    scales: {
+      x: { grid: { color: gridColor }, ticks: { color: textColor, font: { family: mono, size: 11 } } },
+      y: { grid: { color: gridColor }, ticks: { color: textColor, font: { family: mono, size: 11 } }, beginAtZero: true }
+    }
+  }
+});
+
+// Cumulative
+const cumCtx = document.getElementById('cumulativeChart').getContext('2d');
+new Chart(cumCtx, {
+  type: 'line',
+  data: {
+    labels: ['Pre-2016','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025'],
+    datasets: [{
+      label: 'Cumulative',
+      data: [33, 45, 65, 100, 148, 213, 300, 391, 612, 865, 1451],
+      borderColor: '#00e5a0',
+      backgroundColor: 'rgba(0,229,160,0.07)',
+      fill: true,
+      tension: 0.4,
+      pointBackgroundColor: '#00e5a0',
+      pointRadius: 4,
+      pointHoverRadius: 6,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#0d1e30', borderColor: '#1a3045', borderWidth: 1,
+        titleFont: { family: mono, size: 11 }, bodyFont: { family: mono, size: 13 }
+      }
+    },
+    scales: {
+      x: { grid: { color: gridColor }, ticks: { color: textColor, font: { family: mono, size: 10 } } },
+      y: { grid: { color: gridColor }, ticks: { color: textColor, font: { family: mono, size: 10 } } }
+    }
+  }
+});
+
+// Specialty donut
+const specCtx = document.getElementById('specialtyChart').getContext('2d');
+new Chart(specCtx, {
+  type: 'doughnut',
+  data: {
+    labels: ['Radiology','Cardiology','Neurology','Hematology','Other'],
+    datasets: [{
+      data: [79, 10, 4, 2, 5],
+      backgroundColor: ['#00d4ff','#00e5a0','#ff7c2a','#b06eff','#3d6478'],
+      borderWidth: 0,
+      hoverOffset: 6
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#0d1e30', borderColor: '#1a3045', borderWidth: 1,
+        titleFont: { family: mono, size: 11 }, bodyFont: { family: mono, size: 12 },
+        callbacks: { label: (i) => ` ${i.label}: ${i.raw}%` }
+      }
+    },
+    cutout: '65%'
+  }
+});
+
+// MAUDE event types
+const maudeEvtCtx = document.getElementById('maudeEventChart').getContext('2d');
+new Chart(maudeEvtCtx, {
+  type: 'bar',
+  data: {
+    labels: ['Malfunction Only','Injury','Death (Current ~0.3%)','Led to Recall'],
+    datasets: [{
+      data: [63.5, 35.2, 0.3, 20],
+      backgroundColor: ['rgba(0,212,255,0.6)','rgba(255,124,42,0.6)','rgba(255,61,90,0.6)','rgba(176,110,255,0.6)'],
+      borderColor: ['#00d4ff','#ff7c2a','#ff3d5a','#b06eff'],
+      borderWidth: 1, borderRadius: 4
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#0d1e30', borderColor: '#1a3045', borderWidth: 1,
+        titleFont: { family: mono, size: 10 }, bodyFont: { family: mono, size: 12 },
+        callbacks: { label: (i) => ` ${i.raw}%` }
+      }
+    },
+    scales: {
+      x: { grid: { color: gridColor }, ticks: { color: textColor, font: { family: mono, size: 10 }, callback: v => v + '%' }, max: 80 },
+      y: { grid: { color: 'transparent' }, ticks: { color: textColor, font: { family: sans, size: 11 } } }
+    }
+  }
+});
+
+// Timeliness
+const timeCtx = document.getElementById('timelinessChart').getContext('2d');
+new Chart(timeCtx, {
+  type: 'doughnut',
+  data: {
+    labels: ['On Time (≤30d)','Late 31-180d','Very Late >180d','Other'],
+    datasets: [{
+      data: [71.0, 4.5, 9.1, 15.4],
+      backgroundColor: ['rgba(0,229,160,0.7)','rgba(255,124,42,0.7)','rgba(255,61,90,0.7)','rgba(61,100,120,0.5)'],
+      borderWidth: 0, hoverOffset: 4
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#0d1e30', borderColor: '#1a3045', borderWidth: 1,
+        titleFont: { family: mono, size: 10 }, bodyFont: { family: mono, size: 12 },
+        callbacks: { label: i => ` ${i.label}: ${i.raw}%` }
+      }
+    },
+    cutout: '60%'
+  }
+});
+
+// Transparency
+const transCtx = document.getElementById('transparencyChart').getContext('2d');
+new Chart(transCtx, {
+  type: 'bar',
+  data: {
+    labels: ['No Demo-\ngraphic Data','No Training\nSample Size','No Study\nDesign','No Clinical\nStudies','Prospective\nStudies','RCT\nEvidence'],
+    datasets: [{
+      data: [95.5, 53.3, 46.7, 25, 7.7, 1.6],
+      backgroundColor: (ctx) => {
+        const v = ctx.raw;
+        if (v > 50) return 'rgba(255,61,90,0.65)';
+        if (v > 20) return 'rgba(255,124,42,0.65)';
+        return 'rgba(0,229,160,0.65)';
+      },
+      borderColor: (ctx) => {
+        const v = ctx.raw;
+        if (v > 50) return '#ff3d5a';
+        if (v > 20) return '#ff7c2a';
+        return '#00e5a0';
+      },
+      borderWidth: 1, borderRadius: 4
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#0d1e30', borderColor: '#1a3045', borderWidth: 1,
+        titleFont: { family: mono, size: 10 }, bodyFont: { family: mono, size: 13 },
+        callbacks: { label: i => ` ${i.raw}% of devices` }
+      }
+    },
+    scales: {
+      x: { grid: { color: gridColor }, ticks: { color: textColor, font: { family: sans, size: 10 } } },
+      y: { grid: { color: gridColor }, ticks: { color: textColor, font: { family: mono, size: 10 }, callback: v => v + '%' }, max: 100 }
+    }
+  }
+});
+
+// ============ TABS ============
+function showPanel(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ============ VALIDATION SCENARIO BUILDER ============
+function generateScenario() {
+  const specialty = document.getElementById('specialty').value;
+  const classification = document.getElementById('classification').value;
+  const algoType = document.getElementById('algoType').value;
+  const clinicalFunc = document.getElementById('clinicalFunc').value;
+  const environment = document.getElementById('environment').value;
+  const pccp = document.getElementById('pccp').value;
+
+  const specialtyLabels = {
+    radiology: 'Radiology / Diagnostic Imaging', cardiology: 'Cardiology / ECG Analysis',
+    pathology: 'Pathology / Histology AI', sepsis: 'Critical Care / Sepsis Prediction',
+    ophthalmology: 'Ophthalmology / Retinal Screening', neurology: 'Neurology / Neuroimaging'
+  };
+  const classLabels = {
+    class2_510k: 'Class II - 510(k)', class2_denovo: 'Class II - De Novo', class3_pma: 'Class III - PMA'
+  };
+  const algoLabels = {
+    locked: 'Locked Algorithm', adaptive: 'Adaptive / Continuously Learning', llm: 'Foundation Model / LLM'
+  };
+  const funcLabels = {
+    triage: 'Triage / Prioritization', diagnosis: 'Diagnostic Decision Support',
+    detection: 'Detection / Screening', quantification: 'Quantification', treatment: 'Treatment Planning'
+  };
+  const envLabels = {
+    hospital: 'Hospital / Clinical', ambulatory: 'Ambulatory / Outpatient',
+    home: 'Home Use / Patient Self-Use', poc: 'Point-of-Care / Remote'
+  };
+
+  // Risk scoring
+  let riskScore = 0;
+  if (classification === 'class3_pma') riskScore += 35;
+  else if (classification === 'class2_denovo') riskScore += 20;
+  else riskScore += 10;
+  if (algoType === 'adaptive') riskScore += 25;
+  else if (algoType === 'llm') riskScore += 30;
+  else riskScore += 5;
+  if (environment === 'home') riskScore += 20;
+  else if (environment === 'poc') riskScore += 15;
+  else riskScore += 5;
+  if (clinicalFunc === 'treatment') riskScore += 15;
+  else if (clinicalFunc === 'diagnosis') riskScore += 10;
+  else riskScore += 5;
+  riskScore = Math.min(riskScore, 100);
+
+  const riskColor = riskScore >= 70 ? '#ff3d5a' : riskScore >= 45 ? '#ff7c2a' : '#00e5a0';
+  const riskLabel = riskScore >= 70 ? 'HIGH RISK' : riskScore >= 45 ? 'MODERATE RISK' : 'LOWER RISK';
+
+  const phases = [
+    {
+      num: '01', color: '#00d4ff',
+      name: 'Pre-Validation Planning & Design Freeze',
+      desc: `Establish the Software Development Lifecycle (SDLC) framework per IEC 62304. Define the intended use, intended users, and operating environment for a ${specialtyLabels[specialty]} ${funcLabels[clinicalFunc]} device. Identify all AI/ML software items under ${algoLabels[algoType]} architecture.`,
+      criteria: ['IEC 62304 Class B/C SDLC', 'SaMD Risk Classification', 'Intended Use Statement', 'ISO 14971 Risk Mgmt Plan', 'SOUP Inventory']
+    },
+    {
+      num: '02', color: '#00e5a0',
+      name: 'Training Data Governance & Bias Analysis',
+      desc: `Per FDA TPLC Draft Guidance (Jan 2025), document full data lineage and train/validation/test splits. Given the 95.5% demographic transparency gap in cleared devices, proactively report subgroup performance by age, sex, race/ethnicity. Ensure training data represents the ${envLabels[environment]} patient population.`,
+      criteria: ['Data Lineage Documentation', 'Train/Val/Test Split Protocol', 'Demographic Subgroup Analysis', 'GMLP Principle 3 (Representative Data)', 'Dataset Size Disclosure']
+    },
+    {
+      num: '03', color: '#b06eff',
+      name: 'Model Performance Validation (Pre-Market)',
+      desc: `Conduct locked performance evaluation using independent test dataset. For ${algoLabels[algoType]} architecture, validate against primary performance claims tied to ${funcLabels[clinicalFunc]}. Apply FDA GMLP Principle 7 (fit-for-purpose performance). Report sensitivity, specificity, AUC, and calibration metrics.`,
+      criteria: ['Independent Test Dataset', 'Primary Endpoint Metrics', 'Calibration Curve Analysis', 'Sensitivity/Specificity/AUC', 'Confidence Intervals (95%)']
+    },
+    {
+      num: '04', color: '#ff7c2a',
+      name: 'Human-AI Team Performance Testing',
+      desc: `FDA TPLC guidance requires assessment of human-AI workflow performance, not just standalone model accuracy. Conduct reader studies or simulated use studies under ${envLabels[environment]} conditions. Validate that AI output supports, rather than supplants, clinical decision-making per ${classLabels[classification]} pathway requirements.`,
+      criteria: ['Simulated Use Study Design', 'HFE/Usability Validation', 'Reader Study Protocol (if applicable)', 'GMLP Principle 10 (Human-AI Team)', 'AI Output Transparency']
+    },
+    {
+      num: '05', color: '#ff3d5a',
+      name: 'Risk Management Documentation (ISO 14971)',
+      desc: `Complete risk analysis for ${algoLabels[algoType]} ${specialtyLabels[specialty]} device. AI-specific risks must include concept drift, dataset shift (critical gap in MAUDE), and algorithmic bias. For ${environment === 'home' || environment === 'poc' ? 'home/POC use' : 'clinical'} environment, include use-error risk analysis per IEC 62366.`,
+      criteria: ['Risk Analysis (ISO 14971)', 'AI-Specific Hazard Identification', 'Concept Drift Risk Control', 'Algorithmic Bias Risk Control', 'Residual Risk Acceptability']
+    },
+    {
+      num: '06', color: '#00d4ff',
+      name: `Post-Market Surveillance & ${pccp === 'yes' ? 'PCCP' : 'Monitoring'} Plan`,
+      desc: `Establish real-world performance monitoring per FDA QMSR (effective 2026). ${pccp === 'yes' ? 'A PCCP is included: document planned algorithm modifications, modification protocol with validation steps, and impact assessment. Only 10% of 2025 clearances included PCCPs — this is a competitive regulatory differentiator.' : 'Consider PCCP for future algorithm updates to avoid full resubmission.'} MAUDE MDR procedures must include AI-specific failure mode reporting beyond standard malfunction codes.`,
+      criteria: [
+        pccp === 'yes' ? 'PCCP: Modification Description' : 'Post-Market Performance Monitoring',
+        pccp === 'yes' ? 'PCCP: Modification Protocol' : 'Adverse Event MDR Procedures',
+        'Real-World Performance Thresholds', 'Concept Drift Monitoring Triggers', 'QMSR / ISO 13485 QMS Alignment'
+      ]
+    }
+  ];
+
+  let html = `
+    <div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:20px;">
+      <div style="flex:1;min-width:200px;">
+        <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Device Profile</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <div style="font-size:12px;color:var(--text-secondary);"><span style="color:var(--accent-cyan);">Specialty:</span> ${specialtyLabels[specialty]}</div>
+          <div style="font-size:12px;color:var(--text-secondary);"><span style="color:var(--accent-cyan);">Classification:</span> ${classLabels[classification]}</div>
+          <div style="font-size:12px;color:var(--text-secondary);"><span style="color:var(--accent-cyan);">Algorithm:</span> ${algoLabels[algoType]}</div>
+          <div style="font-size:12px;color:var(--text-secondary);"><span style="color:var(--accent-cyan);">Function:</span> ${funcLabels[clinicalFunc]}</div>
+          <div style="font-size:12px;color:var(--text-secondary);"><span style="color:var(--accent-cyan);">Environment:</span> ${envLabels[environment]}</div>
+          <div style="font-size:12px;color:var(--text-secondary);"><span style="color:var(--accent-cyan);">PCCP:</span> ${pccp === 'yes' ? 'Included' : 'Not Included'}</div>
+        </div>
+      </div>
+      <div style="flex:1;min-width:200px;">
+        <div class="risk-meter" style="margin-top:0;">
+          <div class="risk-label">COMPOSITE RISK INDEX</div>
+          <div class="risk-track"><div class="risk-fill" style="width:${riskScore}%;background:linear-gradient(90deg,#00e5a0,${riskColor});"></div></div>
+          <div class="risk-score" style="color:${riskColor};">${riskScore}/100<br><span style="font-size:10px;letter-spacing:0.08em;">${riskLabel}</span></div>
+        </div>
+        <div style="margin-top:12px;padding:10px;background:rgba(0,212,255,0.04);border:1px solid rgba(0,212,255,0.1);border-radius:6px;">
+          <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--accent-cyan);margin-bottom:4px;">Regulatory Pathway Signals</div>
+          <div style="font-size:11px;color:var(--text-secondary);line-height:1.6;">
+            ${algoType === 'adaptive' || algoType === 'llm' ? '⚠ Adaptive/LLM device requires PCCP for post-market updates<br>' : ''}
+            ${classification === 'class3_pma' ? '⚠ PMA pathway requires clinical evidence (not just 510k substantial equivalence)<br>' : ''}
+            ${environment === 'home' ? '⚠ Home use requires enhanced HFE/Usability Engineering<br>' : ''}
+            ✓ GMLP 10 Principles apply across all configurations<br>
+            ✓ TPLC (Jan 2025 Draft) governs full lifecycle
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:12px;font-family:'IBM Plex Mono',monospace;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:8px;">Validation Protocol Phases (FDA GMLP + TPLC + IEC 62304 + ISO 14971)</div>
+    <div class="phase-list">
+  `;
+
+  phases.forEach(ph => {
+    html += `
+      <div class="phase-item">
+        <div class="phase-left">
+          <div class="phase-num" style="background:rgba(255,255,255,0.04);border:1px solid ${ph.color};color:${ph.color};">${ph.num}</div>
+          <div class="phase-line"></div>
+        </div>
+        <div class="phase-content">
+          <div class="phase-name">${ph.name}</div>
+          <div class="phase-desc">${ph.desc}</div>
+          <div class="phase-criteria">
+            ${ph.criteria.map(c => `<span class="criteria-tag">${c}</span>`).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  html += `</div>
+    <div class="insight" style="margin-top:16px;">
+      <div class="insight-title">Critical Note for Your Submission</div>
+      <p>Based on PMC research (2024), 95.5% of cleared AI devices lacked demographic transparency. FDA's 2025 TPLC draft guidance now explicitly requires bias analysis and demographic subgroup performance reporting. Addressing this proactively in your validation package will significantly reduce cycle time and risk of additional information requests.</p>
+    </div>
+    <div class="source-note" style="margin-top:16px;">
+      <strong>FRAMEWORK REFERENCES:</strong> FDA Draft Guidance: AI-Enabled Device Software Functions (Jan 2025) · IEC 62304:2006+AMD1 Medical Device Software Lifecycle · ISO 14971:2019 Risk Management · IMDRF GMLP 10 Guiding Principles (Jan 2025) · FDA PCCP Final Guidance (Dec 2024) · FDA QMSR (eff. 2026) · EU AI Act (Aug 2024, enforcement 2026-27)
+    </div>
+  `;
+
+  document.getElementById('outputContent').innerHTML = html;
+  document.getElementById('validationOutput').classList.add('show');
+  document.getElementById('validationOutput').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function resetForm() {
+  document.getElementById('validationOutput').classList.remove('show');
+  document.querySelectorAll('.form-select').forEach(s => s.selectedIndex = 0);
+}
+</script>
+</body>
+</html>
